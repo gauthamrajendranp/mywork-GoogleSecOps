@@ -1,0 +1,35 @@
+rule geo_multiple_users_logging_in_restricted_countries
+{
+  meta:
+    description = "Detect two or more distinct users logging in from the restricted countries within a timeframe of 1-hour window"
+    author = "Gowthaman"
+    severity = "HIGH"
+
+  events:
+    $event.metadata.event_type = "USER_LOGIN"
+    $event.principal.ip = $ip
+    $event.principal.user.userid = $user
+    $event.principal.location.country_or_region = $user_login_country
+    $user_login_country in %ref_list
+
+ match:
+    $user_login_country over 1h
+
+outcome:
+    $risk_score = max(70) 
+    $event_count = count($event.metadata.id)
+    $unique_users = count_distinct ($event.principal.user.userid)
+    $user_agents = array_distinct($event.network.http.user_agent)
+    $source_ips = array_distinct($event.principal.ip)
+    $principal_ip_country = array_distinct($event.principal.location.country_or_region)
+    $principal_ip_state = array_distinct($event.principal.ip_geo_artifact.location.state)
+    $target_hostnames = array_distinct($event.target.hostname)
+    $target_ips = array_distinct($event.target.ip)
+
+  condition:
+   $event and $unique_users >= 2
+}
+
+____________________________
+
+********************* "ref_list" includes the list the countries in the org blocklist *********************
