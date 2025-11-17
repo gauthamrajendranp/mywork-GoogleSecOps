@@ -1,0 +1,49 @@
+rule geo_data_exfiltration_activity_to_restricted_countries {
+  
+  meta:
+    author = "Gowthaman"
+    description = "Detects outbound data transfers (over 25 MB) or file downloads initiated from/to the restricted countries list"
+    severity = "HIGH"
+
+  events:
+      //  Outbound network transfers from/to restricted countries
+      (
+         $transfer_event.metadata.event_type = "NETWORK_DNS"
+        and $transfer_event.network.direction = "OUTBOUND"
+        and $transfer_event.network.sent_bytes > 25000000  //25 MB 
+        and $transfer_event.principal.location.country_or_region in %ref_list or $transfer_event.target.location.country_or_region in %ref_list
+
+      )
+      or
+      //  File operations from/to restricted countries    
+     (
+        $transfer_event.metadata.event_type = "FILE_COPY" or 
+        $transfer_event.metadata.event_type = "FILE_SYNC"
+        and $transfer_event.target.file.size > 25000000  //25 MB
+        and $transfer_event.principal.location.country_or_region in %ref_list or $transfer_event.target.location.country_or_region in %ref_list
+     )
+        $transfer_event.principal.user.userid = $user_id
+        $transfer_event.principal.ip = $principal_ip
+
+
+  match:
+     $user_id, $principal_ip over 1h
+
+  outcome:
+    $risk_score = max(if($transfer_event.network.sent_bytes > 25000000, 85, 70))
+    $network_http_user_agent = array_distinct($transfer_event.network.http.user_agent)
+    $principal_ip_address = array_distinct($transfer_event.principal.ip)
+    $principal_country = array_distinct($transfer_event.principal.location.country_or_region)
+    $target_country = array_distinct($transfer_event.target.location.country_or_region)
+    $target_hostname = array_distinct($transfer_event.target.hostname)
+    $bytes_sent = max($transfer_event.network.sent_bytes)
+    $file_size = max($transfer_event.target.file.size)
+    $event_types = array_distinct($transfer_event.metadata.event_type)
+    $timestamp = max($transfer_event.metadata.event_timestamp.seconds)
+
+  condition:
+    $transfer_event
+}
+____________________________
+
+********************* ref_list includes the list the countries in the org blocklist *********************
