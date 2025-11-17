@@ -1,7 +1,7 @@
 rule o365_onedrive_unusual_number_of_filedownloads {
 
   meta:
-    author = "Persistent"
+    author = "Gowthaman"
     description = "This rule detects when a single user downloads an unusual number of files from Microsoft OneDrive in a short period, which could indicate data exfiltration or unusual user activity
     data_source = "o365"
     severity = "High"
