@@ -1,0 +1,44 @@
+rule o365_high_volume_onedrive_uploads_detected {
+  
+  meta:
+    author = "Gowthaman"
+    description = "Detects high volume of files uploaded within Microsoft 365's OneDrive by flagging users who upload a significantly large number of files(20 or more) or a very large total amount of data(over 500 MB) within 5 minutes. This could indicate automated uploads, malware activity, or data exfiltration."
+    type = "alert"
+    platform = "azure"
+    data_source = "o365"
+    severity = "Medium"
+    priority = "Medium"
+    
+  events:
+    $event.metadata.vendor_name = "Microsoft"
+    $event.metadata.product_name = "Office 365"
+    $event.metadata.log_type = "OFFICE_365"
+    $event.intermediary.application = "OneDrive"
+    $event.metadata.product_event_type = "FileUploaded"
+    $event.metadata.event_type = "FILE_SYNC" 
+    not $event.principal.hostname = /backup-service-.*/
+    $event.principal.user.userid = $user
+    
+  match:
+    $user over 5m
+
+outcome:
+    $risk_score = 60
+//    $event_count = count_distinct($event.metadata.id)
+    $upload_count = count($event.metadata.id) 
+    $total_size = sum($event.target.file.size)
+    $referral_url = array_distinct($event.network.http.referral_url)
+    $user_agent = array_distinct($event.network.http.user_agent)
+    $principal_application = array_distinct($event.principal.application)
+    $principal_ip = array_distinct($event.principal.ip)
+    $target_application = array_distinct($event.target.application)
+    $principal_user_userid = array_distinct($event.principal.user.userid)
+    $target_file_full_path = array_distinct($event.target.file.full_path)
+    $target_url = array_distinct($event.target.url)
+    $principal_user_location_state = array_distinct($event.principal.location.state)
+    $principal_user_location_country = array_distinct($event.principal.location.country_or_region)
+
+    
+  condition:
+    $event and $upload_count >= 20  or $total_size > 500000000 // 500 MB
+}
