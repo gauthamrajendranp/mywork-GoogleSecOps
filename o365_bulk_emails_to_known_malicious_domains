@@ -1,0 +1,43 @@
+rule o365_bulk_emails_to_known_malicious_domains {
+    meta:
+        author = "Gowthaman"
+        description = "Detects internal users sending a high volume of emails to known malicious email domains within a short timeframe."
+        severity = "HIGH"
+        priority = "HIGH"
+        data_source = "o365"
+        use_case = "Potential data exfiltration or policy violation."
+
+    events:
+        $email.metadata.vendor_name = "Microsoft"
+        $email.metadata.product_name = "Office 365"
+        $email.metadata.log_type = "OFFICE_365"
+        and
+        ( $email.principal.user.email_addresses IN %Malicious_emails  or
+            $email.target.user.email_addresses IN %Malicious_emails )                      // reference list used
+
+        $email.principal.user.userid = $sender
+        $email.target.user.email_addresses = $target
+
+    match:
+        $sender, $target over 5m 
+
+    outcome :
+    $risk_score = 70
+    $event_count = count_distinct($email.metadata.id)
+    $principal_user_state = count_distinct($email.principal.ip_geo_artifact.location.state)
+    $principal_user_country_or_region = count_distinct($email.principal.ip_geo_artifact.location.country_or_region)
+    $principal_hostname = array_distinct($email.principal.asset.hostname)
+    $principal_asset_ip = array_distinct($email.principal.asset.ip)
+    $target_hostname = array_distinct($email.target.hostname)
+    $target_ip = array_distinct($email.target.ip)
+    $principal_user_email = array_distinct($email.principal.user.email_addresses)
+    $target_user_email = array_distinct($email.target.user.managers.email_addresses)
+    $principal_resource_name = array_distinct($email.principal.resource.name)
+    $target_resource_name = array_distinct($email.target.resource.name)
+    $target_url = array_distinct($email.target.url)
+    $target_application = array_distinct($email.target.application)
+    $security_result = array_distinct($email.security_result.action)
+
+    condition:
+        #email > 5
+}
