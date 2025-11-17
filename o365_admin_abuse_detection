@@ -1,0 +1,39 @@
+rule o365_admin_abuse_detection {
+  meta:
+    author = "Gowthaman"
+    description = "Detects multiple patterns of admin abuse after password reset"
+    severity = "HIGH"
+
+  events:
+    // Password reset by admin
+    $reset.metadata.product_event_type = "Reset user password."
+    $reset.principal.user.userid = $admin_user
+    $reset.target.user.userid = $target_user
+    
+    // Various suspicious follow-up activities by the same admin
+    $suspicious_activity.metadata.product_event_type in %o365_product_event_types // reference list
+    $suspicious_activity.principal.user.userid = $admin_user
+    $suspicious_activity.target.user.userid = $target_user
+    
+    // Time window
+    $reset.metadata.event_timestamp.seconds <= $suspicious_activity.metadata.event_timestamp.seconds
+    $suspicious_activity.metadata.event_timestamp.seconds - $reset.metadata.event_timestamp.seconds <= 3600
+
+  match:
+    $target_user over 1h
+
+  outcome:
+    $risk_score = 85
+    $user_agent = array_distinct($suspicious_activity.network.http.user_agent)
+    $principal_application = array_distinct($suspicious_activity.principal.application)
+    $principal_ip = array_distinct($suspicious_activity.principal.ip)
+    $principal_hostname = array_distinct($suspicious_activity.principal.asset.hostname)
+    $target_application = array_distinct($suspicious_activity.target.application)
+    $target_userid = array_distinct($suspicious_activity.target.user.userid)
+    $principal_user_userid = array_distinct($suspicious_activity.principal.user.userid)
+    $principal_user_location_state = array_distinct($suspicious_activity.principal.location.state)
+    $principal_user_location_country = array_distinct($suspicious_activity.principal.location.country_or_region)
+
+  condition:
+    $reset and $suspicious_activity
+}
