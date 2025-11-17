@@ -135,5 +135,3 @@ For questions or issues:
 
 Maintained by: Gowthaman | Security Engineer
 Last Updated: November 17, 2025
-
-This response is AI-generated, for reference only.
