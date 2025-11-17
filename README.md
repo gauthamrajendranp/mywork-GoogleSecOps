@@ -1,3 +1,5 @@
+YARA-L Detection Rules for Google SecOps
+
 A comprehensive collection of YARA-L detection rules designed for Google Chronicle SIEM (SecOps) to enhance security monitoring across various cloud environments and use cases.
 
 📋 Overview
