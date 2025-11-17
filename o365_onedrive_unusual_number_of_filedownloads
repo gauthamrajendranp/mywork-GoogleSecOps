@@ -1,0 +1,38 @@
+rule o365_onedrive_unusual_number_of_filedownloads {
+
+  meta:
+    author = "Persistent"
+    description = "This rule detects when a single user downloads an unusual number of files from Microsoft OneDrive in a short period, which could indicate data exfiltration or unusual user activity
+    data_source = "o365"
+    severity = "High"
+    priority = "High"
+
+  events:
+    $file.metadata.event_type = "USER_RESOURCE_UPDATE_CONTENT"
+    $file.metadata.product_event_type = "FileDownloaded"
+    $file.metadata.product_name = "Office 365"
+    $file.metadata.vendor_name = "Microsoft"
+    $file.target.application = "OneDrive"
+    $file.principal.user.userid  = $userid
+
+  match:
+    $userid over 30m
+
+  outcome:
+    $risk_score = 50
+    $event_count = count_distinct($file.metadata.id)
+  //  $total_download_mb = sum($file.target.file.size) / 1024 / 1024
+    $referral_url = array_distinct($file.network.http.referral_url)
+    $user_agent = array_distinct($file.network.http.user_agent)
+    $principal_application = array_distinct($file.principal.application)
+    $principal_ip = array_distinct($file.principal.ip)
+    $target_application = array_distinct($file.target.application)
+    //$principal_user_email_address = array_distinct(principal.user.email_addresses)
+    $principal_user_userid = array_distinct($file.principal.user.userid)
+    $src_file_full_path = array_distinct($file.src.file.full_path)
+    $src_url = array_distinct($file.src.url)
+
+  condition:
+  #file > 10
+
+}
