@@ -1,0 +1,30 @@
+rule gcp_iam_custom_roles_added_updated_removed {
+
+  meta:
+    author = "Gowthaman"
+    description = "Detect when any Custom Role is Added/Updated/Deleted in the Org."
+    data_source = "GCP Cloud Audit"
+    severity = "Medium"
+
+  events:
+    $e.metadata.vendor_name = "Google Cloud Platform"
+    $e.metadata.log_type = "GCP_CLOUDAUDIT"
+    $e.security_result.action = "ALLOW"
+    ($e.metadata.product_event_type = "google.iam.admin.v1.UpdateRole" or $e.metadata.product_event_type = "google.iam.admin.v1.CreateRole" or $e.metadata.product_event_type = "google.iam.admin.v1.DeleteRole")
+
+  outcome:
+    $risk_score = max(55)
+    $event_count = count_distinct($e.metadata.id)
+    $network_http_user_agent = array_distinct($e.network.http.user_agent)
+    $principal_ip = array_distinct($e.principal.ip)
+    $principal_ip_country = array_distinct($e.principal.ip_geo_artifact.location.country_or_region)
+    $principal_ip_state = array_distinct($e.principal.ip_geo_artifact.location.state)
+    $principal_user_id = $e.principal.user.userid
+    $principal_user_display_name = $e.principal.user.user_display_name
+    $event_name = $e.metadata.product_event_type
+    //$custom_role_name = $e.target.resource.attribute.roles.name
+    $custom_role_id = $e.target.resource.name
+
+  condition:
+    $e
+}
